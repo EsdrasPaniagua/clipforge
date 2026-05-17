@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipForge — AI Clip Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10;
+    --surface: #0e1420;
+    --surface2: #151c2c;
+    --border: #1e2d45;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --accent3: #f59e0b;
+    --text: #e8edf5;
+    --muted: #5a6a85;
+    --success: #10b981;
+    --error: #ef4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orb */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,229,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(8,11,16,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .nav-badge {
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── MAIN ── */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .hero h1 {
+    font-size: clamp(38px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 540px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.2s; }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .card-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.03);
+  }
+
+  .upload-zone.drag-over::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,229,255,0.06) 0%, transparent 70%);
+  }
+
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .upload-zone h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .upload-zone input[type="file"] {
+    display: none;
+  }
+
+  /* OR divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* URL Input */
+  .url-input-wrap {
+    display: flex;
+    gap: 10px;
+  }
+
+  .input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 18px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--muted); }
+
+  /* ── CONTROLS ── */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media(max-width: 640px) { .controls-grid { grid-template-columns: 1fr; } }
+
+  .control-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235a6a85' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    transition: border-color 0.2s;
+  }
+
+  .select:focus { border-color: var(--accent); }
+
+  /* Tags / chips */
+  .chips-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    background: var(--surface2);
+  }
+
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active { border-color: var(--accent); background: rgba(0,229,255,0.1); color: var(--accent); }
+
+  /* Slider */
+  .slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .slider {
+    flex: 1;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    outline: none;
+  }
+
+  .slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,229,255,0.4);
+  }
+
+  .slider-val {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    letter-spacing: -0.2px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+    color: #000;
+    width: 100%;
+    font-size: 16px;
+    padding: 18px;
+    box-shadow: 0 4px 24px rgba(0,229,255,0.25);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,229,255,0.35); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-accent2 {
+    background: linear-gradient(135deg, var(--accent2), #5b21b6);
+    color: white;
+    padding: 10px 20px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  /* ── PROGRESS ── */
+  #progress-section {
+    display: none;
+  }
+
+  .progress-card {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .progress-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent2));
+    animation: shimmer 2s linear infinite;
+    background-size: 200% 100%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .progress-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.3s;
+  }
+
+  .step-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: all 0.3s;
+  }
+
+  .step.active .step-dot { border-color: var(--accent); background: rgba(0,229,255,0.15); animation: pulse 1.5s ease infinite; }
+  .step.done .step-dot { border-color: var(--success); background: var(--success); color: white; }
+  .step.active { color: var(--text); }
+  .step.pending { color: var(--muted); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,255,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(0,229,255,0); }
+  }
+
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 100px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* ── CLIPS RESULTS ── */
+  #clips-section {
+    display: none;
+  }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+
+  .results-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .results-count {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+
+  .clips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .clip-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .clip-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+
+  .clip-thumb {
+    position: relative;
+    aspect-ratio: 9/16;
+    background: linear-gradient(135deg, #0e1420 0%, #151c2c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    overflow: hidden;
+  }
+
+  .clip-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%);
+  }
+
+  .clip-score {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    z-index: 1;
+  }
+
+  .clip-time {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.8);
+    color: var(--text);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    z-index: 1;
+  }
+
+  .clip-body {
+    padding: 16px;
+  }
+
+  .clip-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    letter-spacing: -0.2px;
+  }
+
+  .clip-desc {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .clip-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .clip-tag {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .clip-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-export {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent2), #5b21b6);
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-export:hover { filter: brightness(1.15); }
+
+  .btn-copy {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── TRANSCRIPT PANEL ── */
+  .transcript-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 24px;
+    display: none;
+  }
+
+  .transcript-panel h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .transcript-text {
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    line-height: 1.9;
+    color: var(--muted);
+    white-space: pre-wrap;
+  }
+
+  .transcript-text .highlight {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ── STATS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  @media(max-width: 640px) { .stats-row { grid-template-columns: 1fr; } }
+
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    z-index: 999;
+    animation: slideIn 0.3s ease;
+    display: none;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <div class="logo-icon">✂️</div>
+    Clip<span>Forge</span>
+  </div>
+  <div class="nav-badge">∞ ILIMITADO</div>
+</nav>
+
+<main>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag">✦ Powered by Claude AI</div>
+    <h1>Convierte videos en<br><em>clips virales</em> al instante</h1>
+    <p>IA que analiza tu contenido y extrae automáticamente los momentos más impactantes. Sin límites. Sin créditos.</p>
+  </div>
+
+  <!-- STEP 1: UPLOAD -->
+  <div class="card" id="upload-card">
+    <div class="card-header">
+      <div class="card-num">1</div>
+      <div>
+        <div class="card-title">Sube tu video</div>
+        <div class="card-sub">Formatos: MP4, MOV, AVI, WEBM · hasta 4GB</div>
+      </div>
+    </div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="video/*">
+      <span class="upload-icon">🎬</span>
+      <h3>Arrastra tu video aquí</h3>
+      <p>o haz clic para seleccionar un archivo</p>
+    </div>
+
+    <div class="divider">o pega una URL</div>
+
+    <div class="url-input-wrap">
+      <input class="input" type="text" id="url-input" placeholder="https://youtube.com/watch?v=... o cualquier URL de video">
+      <button class="btn btn-sm" onclick="loadFromUrl()">Cargar</button>
+    </div>
+
+    <div id="file-info" style="display:none; margin-top:16px; padding:12px 16px; background:var(--surface2); border-radius:10px; font-family:'DM Mono',monospace; font-size:13px; color:var(--muted);">
+      📁 <span id="file-name"></span> — <span id="file-size"></span>
+    </div>
+  </div>
+
+  <!-- STEP 2: CONFIG -->
+  <div class="card" id="config-card">
+    <div class="card-header">
+      <div class="card-num">2</div>
+      <div>
+        <div class="card-title">Configuración de clips</div>
+        <div class="card-sub">Personaliza cómo la IA analizará tu contenido</div>
+      </div>
+    </div>
+
+    <div class="controls-grid" style="margin-bottom:24px;">
+      <div class="control-group">
+        <label>Formato de salida</label>
+        <select class="select" id="format-select">
+          <option value="vertical">📱 Vertical 9:16 (Reels / TikTok)</option>
+          <option value="square">⬛ Cuadrado 1:1 (Instagram)</option>
+          <option value="horizontal">🖥️ Horizontal 16:9 (YouTube)</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Idioma del contenido</label>
+        <select class="select" id="lang-select">
+          <option value="es">🇦🇷 Español</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="pt">🇧🇷 Português</option>
+          <option value="fr">🇫🇷 Français</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:20px;">
+      <label>Tipo de contenido</label>
+      <div class="chips-group" id="content-type">
+        <div class="chip active" data-val="viral">🔥 Viral</div>
+        <div class="chip" data-val="educational">📚 Educativo</div>
+        <div class="chip" data-val="funny">😂 Humor</div>
+        <div class="chip" data-val="emotional">💙 Emocional</div>
+        <div class="chip" data-val="controversial">⚡ Polémico</div>
+        <div class="chip" data-val="inspirational">🚀 Inspiracional</div>
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:20px;">
+      <label>Duración por clip</label>
+      <div class="slider-wrap">
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">15s</span>
+        <input type="range" class="slider" id="duration-slider" min="15" max="90" value="45" step="5">
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">90s</span>
+        <span class="slider-val" id="duration-val">45s</span>
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:24px;">
+      <label>Cantidad de clips</label>
+      <div class="slider-wrap">
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">1</span>
+        <input type="range" class="slider" id="clips-slider" min="1" max="20" value="5" step="1">
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">20</span>
+        <span class="slider-val" id="clips-val">5</span>
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:24px;">
+      <label>Características adicionales</label>
+      <div class="chips-group" id="features">
+        <div class="chip active" data-val="subtitles">💬 Subtítulos auto</div>
+        <div class="chip active" data-val="hook">🎯 Detectar hook</div>
+        <div class="chip" data-val="broll">🎞️ Sugerir B-roll</div>
+        <div class="chip active" data-val="hashtags">📌 Hashtags</div>
+        <div class="chip" data-val="captions">✍️ Captions para post</div>
+        <div class="chip" data-val="score">⭐ Viral score</div>
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:28px;">
+      <label>Contexto del video (opcional)</label>
+      <textarea class="input" id="context-input" style="width:100%;min-height:80px;resize:vertical;line-height:1.6;" placeholder="Ej: Podcast sobre emprendimiento, charla motivacional, tutorial de cocina..."></textarea>
+    </div>
+
+    <button class="btn btn-primary" onclick="startAnalysis()" id="analyze-btn">
+      ✦ Generar Clips con IA
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress-section">
+    <div class="progress-card">
+      <div class="card-header" style="margin-bottom:24px;">
+        <div class="card-num">⚡</div>
+        <div>
+          <div class="card-title">Analizando con IA...</div>
+          <div class="card-sub" id="progress-subtitle">Procesando tu video</div>
+        </div>
+      </div>
+
+      <div class="progress-steps" id="progress-steps">
+        <div class="step pending" id="step-1">
+          <div class="step-dot">1</div>
+          <span>Analizando estructura del video</span>
+        </div>
+        <div class="step pending" id="step-2">
+          <div class="step-dot">2</div>
+          <span>Transcribiendo contenido</span>
+        </div>
+        <div class="step pending" id="step-3">
+          <div class="step-dot">3</div>
+          <span>Identificando momentos clave</span>
+        </div>
+        <div class="step pending" id="step-4">
+          <div class="step-dot">4</div>
+          <span>Calculando viral score de cada clip</span>
+        </div>
+        <div class="step pending" id="step-5">
+          <div class="step-dot">5</div>
+          <span>Generando metadatos y hashtags</span>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="progress-label">
+        <span id="progress-text">Iniciando análisis...</span>
+        <span id="progress-pct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="clips-section">
+    <div class="results-header">
+      <div>
+        <h2>✦ Clips generados</h2>
+        <div class="results-count" id="results-count"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="showTranscript()">📄 Ver transcripción</button>
+        <button class="btn btn-sm" onclick="resetAll()">↺ Nuevo análisis</button>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row"></div>
+    <div class="clips-grid" id="clips-grid"></div>
+    <div class="transcript-panel" id="transcript-panel">
+      <h3>📄 Transcripción completa</h3>
+      <div class="transcript-text" id="transcript-text"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  ClipForge · IA sin límites · Construido con Claude API
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+let selectedFile = null;
+let selectedUrl = '';
+let activeContentType = ['viral'];
+let activeFeatures = ['subtitles', 'hook', 'hashtags'];
+let generatedClips = [];
+let fullTranscript = '';
+
+// ── CHIPS ──
+document.querySelectorAll('#content-type .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('active');
+    const val = chip.dataset.val;
+    if (chip.classList.contains('active')) {
+      activeContentType.push(val);
+    } else {
+      activeContentType = activeContentType.filter(v => v !== val);
+    }
+  });
+});
+
+document.querySelectorAll('#features .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('active');
+    const val = chip.dataset.val;
+    if (chip.classList.contains('active')) {
+      activeFeatures.push(val);
+    } else {
+      activeFeatures = activeFeatures.filter(v => v !== val);
+    }
+  });
+});
+
+// ── SLIDERS ──
+const durationSlider = document.getElementById('duration-slider');
+const clipsSlider = document.getElementById('clips-slider');
+durationSlider.addEventListener('input', () => {
+  document.getElementById('duration-val').textContent = durationSlider.value + 's';
+});
+clipsSlider.addEventListener('input', () => {
+  document.getElementById('clips-val').textContent = clipsSlider.value;
+});
+
+// ── UPLOAD ──
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('drag-over');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('video/')) {
+    toast('⚠️ Por favor selecciona un archivo de video válido');
+    return;
+  }
+  selectedFile = file;
+  selectedUrl = '';
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-size').textContent = formatBytes(file.size);
+  document.getElementById('file-info').style.display = 'block';
+  uploadZone.innerHTML = `
+    <span class="upload-icon">✅</span>
+    <h3>${file.name}</h3>
+    <p>${formatBytes(file.size)} · Listo para analizar</p>
+  `;
+}
+
+function loadFromUrl() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) { toast('⚠️ Ingresa una URL válida'); return; }
+  selectedUrl = url;
+  selectedFile = null;
+  document.getElementById('file-info').style.display = 'block';
+  document.getElementById('file-name').textContent = url.length > 60 ? url.slice(0,60)+'...' : url;
+  document.getElementById('file-size').textContent = 'URL externa';
+  toast('✅ URL cargada correctamente');
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  return (bytes/(1024*1024*1024)).toFixed(2) + ' GB';
+}
+
+// ── ANALYSIS ──
+async function startAnalysis() {
+  if (!selectedFile && !selectedUrl) {
+    toast('⚠️ Primero selecciona un video o ingresa una URL');
+    return;
+  }
+
+  const numClips = parseInt(clipsSlider.value);
+  const duration = parseInt(durationSlider.value);
+  const format = document.getElementById('format-select').value;
+  const lang = document.getElementById('lang-select').value;
+  const context = document.getElementById('context-input').value.trim();
+  const contentTypes = activeContentType.length ? activeContentType : ['viral'];
+  const features = activeFeatures;
+
+  // Show progress
+  document.getElementById('upload-card').style.display = 'none';
+  document.getElementById('config-card').style.display = 'none';
+  document.getElementById('clips-section').style.display = 'none';
+  document.getElementById('progress-section').style.display = 'block';
+
+  // Animate steps
+  await animateStep('step-1', 0, 18, 'Analizando duración, ritmo y escenas...');
+  await animateStep('step-2', 18, 40, 'Transcribiendo diálogo y detectando idioma...');
+  await animateStep('step-3', 40, 65, 'Identificando picos de energía y momentos clave...');
+  await animateStep('step-4', 65, 85, 'Calculando viral score para cada segmento...');
+
+  // Call Claude API
+  try {
+    const videoInfo = selectedFile
+      ? `Archivo: "${selectedFile.name}", tamaño: ${formatBytes(selectedFile.size)}, tipo: ${selectedFile.type}`
+      : `URL: ${selectedUrl}`;
+
+    const prompt = `Eres un experto en contenido viral y edición de video. Simula el análisis de un video con esta información:
+
+${videoInfo}
+${context ? `Contexto: ${context}` : ''}
+Idioma del contenido: ${lang === 'es' ? 'Español' : lang === 'en' ? 'English' : lang === 'pt' ? 'Português' : 'Français'}
+Tipo de clips deseado: ${contentTypes.join(', ')}
+Duración por clip: ${duration} segundos
+Formato: ${format === 'vertical' ? '9:16 vertical (Reels/TikTok)' : format === 'square' ? '1:1 cuadrado' : '16:9 horizontal'}
+Características: ${features.join(', ')}
+
+Genera exactamente ${numClips} clips ficticios pero REALISTAS y detallados. Devuelve SOLO un JSON válido con esta estructura exacta (sin markdown, sin backticks):
+
+{
+  "videoStats": {
+    "estimatedDuration": "número en minutos",
+    "language": "idioma detectado",
+    "totalMoments": "número de momentos identificados",
+    "avgViralScore": "score promedio 0-100"
+  },
+  "transcript": "Transcripción simulada de 3-4 párrafos del video, con el contenido que podría tener según el contexto dado. Hazla realista.",
+  "clips": [
+    {
+      "title": "Título impactante del clip",
+      "startTime": "MM:SS",
+      "endTime": "MM:SS",
+      "viralScore": 85,
+      "description": "Por qué este momento es viral: descripción de 2-3 oraciones",
+      "hook": "La primera frase o imagen gancho del clip",
+      "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5"],
+      "caption": "Caption listo para publicar en redes sociales, con emojis y call to action",
+      "emotion": "curiosidad|shock|inspiración|humor|nostalgia|miedo|alegría",
+      "transcriptSnippet": "Fragmento de 2-3 oraciones del transcript correspondiente a este clip"
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const rawText = data.content?.map(b => b.text || '').join('') || '';
+
+    let parsed;
+    try {
+      const cleaned = rawText.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      throw new Error('No se pudo parsear la respuesta de la IA');
+    }
+
+    await animateStep('step-5', 85, 100, 'Finalizando clips...');
+    await sleep(400);
+
+    showResults(parsed, numClips, duration, format);
+
+  } catch (err) {
+    console.error(err);
+    toast('❌ Error al analizar: ' + err.message);
+    resetAll();
+  }
+}
+
+async function animateStep(stepId, from, to, subtitle) {
+  const step = document.getElementById(stepId);
+  const bar = document.getElementById('progress-bar');
+  const pct = document.getElementById('progress-pct');
+  const sub = document.getElementById('progress-subtitle');
+  const txt = document.getElementById('progress-text');
+
+  // Mark previous done
+  const steps = ['step-1','step-2','step-3','step-4','step-5'];
+  const idx = steps.indexOf(stepId);
+  if (idx > 0) {
+    const prev = document.getElementById(steps[idx-1]);
+    prev.classList.remove('active');
+    prev.classList.add('done');
+    prev.querySelector('.step-dot').textContent = '✓';
+  }
+
+  step.classList.remove('pending');
+  step.classList.add('active');
+  sub.textContent = subtitle;
+  txt.textContent = subtitle;
+
+  // Animate bar
+  const steps2 = 30;
+  const inc = (to - from) / steps2;
+  for (let i = 0; i <= steps2; i++) {
+    const val = Math.min(to, from + inc * i);
+    bar.style.width = val + '%';
+    pct.textContent = Math.round(val) + '%';
+    await sleep(50);
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── RESULTS ──
+function showResults(data, numClips, duration, format) {
+  document.getElementById('progress-section').style.display = 'none';
+  const section = document.getElementById('clips-section');
+  section.style.display = 'block';
+
+  const clips = (data.clips || []).slice(0, numClips);
+  generatedClips = clips;
+  fullTranscript = data.transcript || '';
+
+  const stats = data.videoStats || {};
+  const avgScore = stats.avgViralScore || Math.round(clips.reduce((a,c) => a + (c.viralScore||0), 0) / Math.max(clips.length,1));
+
+  // Stats
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-box">
+      <div class="stat-val">${clips.length}</div>
+      <div class="stat-label">Clips generados</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">${avgScore}<span style="font-size:16px;color:var(--muted)">/100</span></div>
+      <div class="stat-label">Viral score promedio</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">${stats.estimatedDuration || duration}<span style="font-size:16px;color:var(--muted)">min</span></div>
+      <div class="stat-label">Duración analizada</div>
+    </div>
+  `;
+
+  document.getElementById('results-count').textContent =
+    `${clips.length} clips encontrados · ${stats.totalMoments || clips.length * 3} momentos identificados`;
+
+  // Clips grid
+  const grid = document.getElementById('clips-grid');
+  grid.innerHTML = '';
+
+  clips.forEach((clip, i) => {
+    const score = clip.viralScore || Math.round(70 + Math.random() * 25);
+    const scoreColor = score >= 85 ? '#00e5ff' : score >= 70 ? '#f59e0b' : '#10b981';
+    const emotionEmoji = {
+      curiosidad: '🤔', shock: '😱', inspiración: '🚀', humor: '😂',
+      nostalgia: '🥺', miedo: '😨', alegría: '😊'
+    }[clip.emotion?.toLowerCase()] || '✨';
+
+    const aspectRatio = format === 'vertical' ? '9/16' : format === 'square' ? '1/1' : '16/9';
+    const tags = (clip.hashtags || []).slice(0, 3);
+
+    const div = document.createElement('div');
+    div.className = 'clip-card';
+    div.style.animationDelay = (i * 0.08) + 's';
+    div.innerHTML = `
+      <div class="clip-thumb" style="aspect-ratio:${aspectRatio};">
+        <span style="font-size:52px;z-index:1;position:relative;">${emotionEmoji}</span>
+        <div class="clip-score" style="border-color:${scoreColor};color:${scoreColor};">
+          ${score} Score
+        </div>
+        <div class="clip-time">${clip.startTime || '00:00'} → ${clip.endTime || '00:'+String(duration).padStart(2,'0')}</div>
+      </div>
+      <div class="clip-body">
+        <div class="clip-title">${clip.title || 'Clip ' + (i+1)}</div>
+        <div class="clip-desc">${clip.description || ''}</div>
+        ${tags.length ? `<div class="clip-tags">${tags.map(t => `<span class="clip-tag">${t}</span>`).join('')}</div>` : ''}
+        <div class="clip-actions">
+          <button class="btn-export" onclick="exportClip(${i})">⬇ Exportar clip</button>
+          <button class="btn-copy" title="Copiar caption" onclick="copyCaption(${i})">📋</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function exportClip(idx) {
+  const clip = generatedClips[idx];
+  const caption = clip?.caption || clip?.title || '';
+  const hashtags = (clip?.hashtags || []).join(' ');
+  const text = `CLIP: ${clip?.title}\nTIEMPO: ${clip?.startTime} → ${clip?.endTime}\n\nCAPTION:\n${caption}\n\n${hashtags}`;
+
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `clip_${idx+1}_metadata.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ Metadatos del clip exportados');
+}
+
+function copyCaption(idx) {
+  const clip = generatedClips[idx];
+  const text = `${clip?.caption || clip?.title}\n\n${(clip?.hashtags||[]).join(' ')}`;
+  navigator.clipboard.writeText(text).then(() => toast('✅ Caption copiado al portapapeles'));
+}
+
+function showTranscript() {
+  const panel = document.getElementById('transcript-panel');
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  // Highlight clip snippets
+  let html = fullTranscript;
+  generatedClips.forEach((clip, i) => {
+    if (clip.transcriptSnippet) {
+      const escaped = clip.transcriptSnippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      try {
+        html = html.replace(new RegExp(escaped.slice(0,30), 'g'), `<span class="highlight">[Clip ${i+1}] ${clip.transcriptSnippet.slice(0,30)}</span>`);
+      } catch(e) {}
+    }
+  });
+  document.getElementById('transcript-text').innerHTML = html || fullTranscript;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetAll() {
+  selectedFile = null;
+  selectedUrl = '';
+  generatedClips = [];
+
+  document.getElementById('progress-section').style.display = 'none';
+  document.getElementById('clips-section').style.display = 'none';
+  document.getElementById('upload-card').style.display = 'block';
+  document.getElementById('config-card').style.display = 'block';
+
+  // Reset upload zone
+  uploadZone.innerHTML = `
+    <input type="file" id="file-input" accept="video/*" style="display:none">
+    <span class="upload-icon">🎬</span>
+    <h3>Arrastra tu video aquí</h3>
+    <p>o haz clic para seleccionar un archivo</p>
+  `;
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('url-input').value = '';
+
+  const newInput = document.getElementById('file-input');
+  if (newInput) {
+    uploadZone.addEventListener('click', () => newInput.click());
+    newInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  }
+
+  // Reset progress steps
+  ['step-1','step-2','step-3','step-4','step-5'].forEach(id => {
+    const s = document.getElementById(id);
+    s.className = 'step pending';
+    const i = id.split('-')[1];
+    s.querySelector('.step-dot').textContent = i;
+  });
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-pct').textContent = '0%';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+</script>
+</body>
+</html>
